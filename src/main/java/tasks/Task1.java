@@ -2,9 +2,12 @@ package tasks;
 
 import common.Person;
 import common.PersonService;
-import java.util.Collections;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /*
 Задача 1
@@ -12,6 +15,9 @@ import java.util.Set;
 (он выдает несортированный Set<Person>, внутренняя работа сервиса неизвестна)
 нужно их отсортировать в том же порядке, что и переданные id.
 Оценить асимптотику работы
+ */
+/*
+асимптотика равна O(n)
  */
 public class Task1 {
 
@@ -22,7 +28,10 @@ public class Task1 {
   }
 
   public List<Person> findOrderedPersons(List<Integer> personIds) {
-    Set<Person> persons = personService.findPersons(personIds);
-    return Collections.emptyList();
+    Map<Integer, Person> personsMap = personService.findPersons(personIds)
+        .stream()
+        .collect(Collectors.toMap(Person::id, person -> person));
+
+    return personIds.stream().map(personsMap::get).toList();
   }
 }
