@@ -1,13 +1,9 @@
 package tasks;
 
 import common.Person;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+
+import java.time.Instant;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -25,17 +21,18 @@ public class Task9 {
   // Костыль, эластик всегда выдает в топе "фальшивую персону".
   // Конвертируем начиная со второй
   /*
-  мне кажется исключение фальшивой персоны должно происходить в коде,
-  обрабатывающем результат выдачи эластика, производить удаление здесь - некорректно,
-  так как, например, методу может быть передан список персон без фальшивой персоны
-  при использовании без эластика
+  если в метод getNames будет передан неизменяемый лист, то попытка вызова у него remove(0) закончится исключением,
+  и метод getNames не выполнит свою работу;
+
+  поэтому используем для обработки подсписок, состоящий из элементов с первого (нумерация с нуля) по последний элемент
+  исходного списка;
+  обработка происходит если кол-во персон больше чем 1, если одна - то отбрасывается (фальшивая)
   */
   public List<String> getNames(List<Person> persons) {
-    if (persons.isEmpty()) {
+    if (persons.size() <= 1) {
       return Collections.emptyList();
     }
-    persons.remove(0);
-    return persons.stream().map(Person::firstName).collect(Collectors.toList());
+    return persons.subList(1, persons.size()-1).stream().map(Person::firstName).collect(Collectors.toList());
   }
 
   // Зачем-то нужны различные имена этих же персон (без учета фальшивой разумеется)
@@ -46,53 +43,44 @@ public class Task9 {
 
   // Тут фронтовая логика, делаем за них работу - склеиваем ФИО
   public String convertPersonToString(Person person) {
-    String result = "";
-    if (person.secondName() != null) {
-      result += person.secondName() + " ";
-    }
-
-    if (person.firstName() != null) {
-      result += person.firstName() + " ";
-    }
-
-    //здесь нужно отчество, а не фамилия
-    if (person.middleName() != null) {
-      result += person.middleName();
-    }
-    return result;
+    return Stream.of(person.secondName(),person.firstName(), person.middleName())
+        .filter(Objects::nonNull)
+        .collect(Collectors.joining(" "));
   }
 
   // словарь id персоны -> ее имя
   public Map<Integer, String> getPersonNames(Collection<Person> persons) {
     /*
-    оптимизация кода
+    оптимизация кода, toMap с функцией мержа на случай персон с одинаковым id;
+    если применять toMap без функции мержа, то при добавлении персон с одинаковым id
+    метод toMap выдаст ошибку
      */
-    return persons.stream().collect(Collectors.toMap(Person::id, Person::firstName));
+    return persons
+        .stream()
+        .collect(Collectors.toMap(
+            Person::id,
+            this::convertPersonToString,
+            (sameId1, sameId2) -> sameId1)
+        );
   }
 
   // есть ли совпадающие в двух коллекциях персоны?
   public boolean hasSamePersons(Collection<Person> persons1, Collection<Person> persons2) {
     /*
-    чтобы сократить временную сложность алгоритма c O(n2) до O(n) -
-    применяем стрим с методом filter(выполняется за O(n))
-    и множества HashSet с методом contains (выполняется за O(1))
+    оптимизация кода
     */
-    Set<Person> persons1Set = new HashSet<>(persons1);
-    Set<Person> persons2Set = new HashSet<>(persons2);
-    Set<Person> samePersons = persons1Set.stream()
-                                         .filter(persons2Set::contains)
-                                         .collect(Collectors.toSet());
-    if (samePersons.isEmpty()) {
-      return false;
-    } else {
-      return true;
-    }
+    return persons1.stream().anyMatch(persons2::contains);
   }
 
   // Посчитать число четных чисел
   public long countEven(Stream<Integer> numbers) {
     /*
-    оптимизация кода, лишняя переменная count
+    оптимизация кода, лишняя переменная count;
+    так же предполагаю что использование поля count плохо при использовании одного и того же
+    экземпляра класса Task9 и его метода countEven в разных потоках: получается общая переменная
+    для вычисления результата в разных потоках, и при параллельном выполнении это будет приводить
+    к неправильным результатам вычисления кол-ва четных чисел (например, один поток инкрементит count,
+    делая неправильным результат другого потока, и наоборот)
      */
     return numbers.filter(num -> num % 2 == 0).count();
   }
@@ -100,8 +88,15 @@ public class Task9 {
   // Загадка - объясните почему assert тут всегда верен
   // Пояснение в чем соль - мы перетасовали числа, обернули в HashSet, а toString() у него вернул их в сортированном порядке
   /*
-  причиной этого служит то, что хэш целых чисел равен этому же числу, поэтому числа складываются во множество
-  в порядке возрастания
+  происходит следующее:
+    при инициализации hashset списком integers создается map размером 16384;
+    так как хэш целого числа равен самому числу, то эти числа складываются в map(на основе которого построен hashset) в корзины, номера которых
+    вычисляются как остаток от деления по модулю самого числа на 16384 (число 1 - в корзину с номером 1, число 2 -в козину с адресом 2 и т.д. в порядке возрастания);
+    при вызове toString элементы считываются из map последовательно в порядке возрастания из корзин начиная с самой
+    младшей и таким образом при обходе всех корзин будут считаны числа в порядке возрастания
+
+    если добавить в hashset число, большее чем 16384, например, 16386, то адрес корзины будет равен 16386 % 16384 = 2,
+    и это число будет положено в корзину с номером 2, и при выводе будет следующее: 1, 2, 16386, 3, 4...
   */
   void listVsSet() {
     List<Integer> integers = IntStream.rangeClosed(1, 10000).boxed().collect(Collectors.toList());

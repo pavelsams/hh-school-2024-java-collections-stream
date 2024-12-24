@@ -17,19 +17,22 @@ import java.util.stream.Collectors;
  */
 public class Task6 {
 
+  private static String getDescriptionPerson(Person person, Area area) {
+    return person.firstName() + " - " + area.getName();
+  }
+
   public static Set<String> getPersonDescriptions(Collection<Person> persons,
                                                   Map<Integer, Set<Integer>> personAreaIds,
                                                   Collection<Area> areas) {
-    Set<String> personDescrs = new HashSet<>();
-    Map<Integer, String> areaNames = areas.stream().collect(Collectors.toMap(Area::getId, Area::getName));
+    Set<String> personsDescriptions = new HashSet<>();
+    Map<Integer, Area> areasMap = areas.stream().collect(Collectors.toMap(Area::getId, area -> area));
 
     for(Person person : persons) {
-        String personName = person.firstName();
-        Set<Integer> areaIds = personAreaIds.get(person.id());
+      Set<Integer> areaIds = personAreaIds.get(person.id());
       for(Integer areaId : areaIds) {
-        personDescrs.add(personName + " - "  + areaNames.get(areaId));
+        personsDescriptions.add(getDescriptionPerson(person, areasMap.get(areaId)));
       }
     }
-    return personDescrs;
+    return personsDescriptions;
   }
 }

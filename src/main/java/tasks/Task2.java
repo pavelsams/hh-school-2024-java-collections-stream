@@ -19,15 +19,9 @@ public class Task2 {
   public static List<Person> combineAndSortWithLimit(Collection<Person> persons1,
                                                      Collection<Person> persons2,
                                                      int limit) {
-    List<Person> orderedPersons;
-    if (limit != 0) {
-      orderedPersons = Stream.concat(persons1.stream(), persons2.stream())
-                             .sorted(Comparator.comparing(Person::createdAt))
-                             .limit(limit)
-                             .toList();
-    } else {
-      orderedPersons = Collections.emptyList();
-    }
-    return orderedPersons;
+    return  Stream.concat(persons1.stream(), persons2.stream())
+       .sorted(Comparator.comparing(Person::createdAt))
+       .limit(limit)
+       .toList();
   }
 }

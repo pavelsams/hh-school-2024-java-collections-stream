@@ -28,15 +28,10 @@ public class Task1 {
   }
 
   public List<Person> findOrderedPersons(List<Integer> personIds) {
-    List<Person> orderedPersons = new ArrayList<>();
-    if (!personIds.isEmpty()) {
-      Set<Person> personsSet = personService.findPersons(personIds);
-      Map<Integer, Person> personsMap = personsSet.stream()
-                                        .collect(Collectors.toMap(Person::id, person -> person));
-      for (Integer id : personIds) {
-        orderedPersons.add(personsMap.get(id));
-      }
-    }
-    return orderedPersons;
+    Map<Integer, Person> personsMap = personService.findPersons(personIds)
+        .stream()
+        .collect(Collectors.toMap(Person::id, person -> person));
+
+    return personIds.stream().map(personsMap::get).toList();
   }
 }
